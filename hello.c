@@ -127,6 +127,7 @@ int main(int argc, char** argv)
     }
 
     test_square(context, device_id, commands);
+    test_pipe(context, device_id, commands);
 
     // Shutdown and cleanup
     //

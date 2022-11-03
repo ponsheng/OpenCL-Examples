@@ -4,7 +4,7 @@
 #include <CL/opencl.h>
 
 // Auto-gen
-#include "square_cl.h"
+#include "pipe_cl.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -13,7 +13,7 @@
 #define DATA_SIZE (1024)
 
 
-int test_square(cl_context context, cl_device_id device_id, cl_command_queue commands) {
+int test_pipe(cl_context context, cl_device_id device_id, cl_command_queue commands) {
 
     float data[DATA_SIZE];              // original data set given to device
     float results[DATA_SIZE];           // results returned from device
@@ -24,7 +24,8 @@ int test_square(cl_context context, cl_device_id device_id, cl_command_queue com
 
     cl_int err;                            // error code returned from api calls
     cl_program program;                 // compute program
-    cl_kernel kernel;                   // compute kernel
+    cl_kernel writer_kernel;                   // compute kernel
+    cl_kernel reader_kernel;                   // compute kernel
     
     cl_mem input;                       // device memory used for the input array
     cl_mem output;                      // device memory used for the output array
@@ -61,10 +62,17 @@ int test_square(cl_context context, cl_device_id device_id, cl_command_queue com
 
     // Create the compute kernel in the program we wish to run
     //
-    kernel = clCreateKernel(program, "square", &err);
-    if (!kernel || err != CL_SUCCESS)
+    writer_kernel = clCreateKernel(program, "pipe_writer", &err);
+    if (!writer_kernel || err != CL_SUCCESS)
     {
-        printf("Error: Failed to create compute kernel!\n");
+        printf("Error: Failed to create writer kernel!(%d)\n", err);
+        exit(1);
+    }
+
+    reader_kernel = clCreateKernel(program, "pipe_reader", &err);
+    if (!reader_kernel || err != CL_SUCCESS)
+    {
+        printf("Error: Failed to create reader kernel!\n");
         exit(1);
     }
 
@@ -87,12 +95,20 @@ int test_square(cl_context context, cl_device_id device_id, cl_command_queue com
         exit(1);
     }
 
+    cl_mem pipe = clCreatePipe(context, 0, sizeof(float), count, NULL, NULL);
+    if (!pipe) {
+        printf("Error: Failed to create pipe\n");
+        exit(1);
+    }
+
     // Set the arguments to our compute kernel
     //
     err = 0;
-    err  = clSetKernelArg(kernel, 0, sizeof(cl_mem), &input);
-    err |= clSetKernelArg(kernel, 1, sizeof(cl_mem), &output);
-    err |= clSetKernelArg(kernel, 2, sizeof(unsigned int), &count);
+    err |= clSetKernelArg(writer_kernel, 0, sizeof(cl_mem), &input);
+    err |= clSetKernelArg(writer_kernel, 1, sizeof(cl_mem), &pipe);
+
+    err |= clSetKernelArg(reader_kernel, 0, sizeof(cl_mem), &output);
+    err |= clSetKernelArg(reader_kernel, 1, sizeof(cl_mem), &pipe);
     if (err != CL_SUCCESS)
     {
         printf("Error: Failed to set kernel arguments! %d\n", err);
@@ -101,7 +117,7 @@ int test_square(cl_context context, cl_device_id device_id, cl_command_queue com
 
     // Get the maximum work group size for executing the kernel on the device
     //
-    err = clGetKernelWorkGroupInfo(kernel, device_id, CL_KERNEL_WORK_GROUP_SIZE, sizeof(local), &local, NULL);
+    err = clGetKernelWorkGroupInfo(reader_kernel, device_id, CL_KERNEL_WORK_GROUP_SIZE, sizeof(local), &local, NULL);
     if (err != CL_SUCCESS)
     {
         printf("Error: Failed to retrieve kernel work group info! %d\n", err);
@@ -112,7 +128,15 @@ int test_square(cl_context context, cl_device_id device_id, cl_command_queue com
     // using the maximum number of work group items for this device
     //
     global = count;
-    err = clEnqueueNDRangeKernel(commands, kernel, 1, NULL, &global, &local, 0, NULL, NULL);
+    printf("Run kernel with: gloabl %d, local %d\n", global, local);
+    cl_event sync;
+    err = clEnqueueNDRangeKernel(commands, writer_kernel, 1, NULL, &global, &local, 0, NULL, &sync);
+    if (err)
+    {
+        printf("Error: Failed to execute kernel!\n");
+        return EXIT_FAILURE;
+    }
+    err = clEnqueueNDRangeKernel(commands, reader_kernel, 1, NULL, &global, &local, 0, NULL, &sync);
     if (err)
     {
         printf("Error: Failed to execute kernel!\n");
@@ -148,5 +172,6 @@ int test_square(cl_context context, cl_device_id device_id, cl_command_queue com
     clReleaseMemObject(input);
     clReleaseMemObject(output);
     clReleaseProgram(program);
-    clReleaseKernel(kernel);
+    clReleaseKernel(reader_kernel);
+    clReleaseKernel(writer_kernel);
 }
