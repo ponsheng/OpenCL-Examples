@@ -4,7 +4,7 @@
 #include <CL/opencl.h>
 
 // Auto-gen
-#include "pipe_cl.h"
+#include "pipe_resv_cl.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -161,9 +161,13 @@ int test_pipe_resv(cl_context context, cl_device_id device_id, cl_command_queue 
     //
     correct = 0;
     for(i = 0; i < count; i++)
+        printf("%d ", data[i]);
+    printf("\n");
+    for(i = 0; i < count; i++)
     {
         if(results[i] == data[i])
             correct++;
+        printf("%d ", results[i]);
     }
     
     // Print a brief summary detailing the results
