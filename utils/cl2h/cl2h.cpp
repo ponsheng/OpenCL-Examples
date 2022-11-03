@@ -17,12 +17,14 @@ void usage() {
 
 string getHeaderBase(const string &cl_file) {
   string header_name = cl_file;
+  string dir_path;
   size_t pos;
 
   // Get basename , TODO find \ for Windows
   pos = cl_file.rfind("/");
   if (pos != string::npos) {
     header_name = cl_file.substr(pos + 1);
+    dir_path = cl_file.substr(0, pos + 1);
   }
 
   // Replace all '.' to '_' in basename
@@ -34,9 +36,9 @@ string getHeaderBase(const string &cl_file) {
     header_name.replace(pos, 1, "_");
   } while (pos != string::npos);
 
-  header_name += ".h";
+  header_name = dir_path + header_name + ".h";
 
-  cout << "Header name: " << header_name << endl;
+  cout << "Gen: " << header_name << endl;
 
   return header_name;
 }

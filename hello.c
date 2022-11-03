@@ -88,9 +88,6 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    printf("There is %u platforms\n", platform_num);
-
-
     cl_uint device_num;
     cl_device_type device_type = CL_DEVICE_TYPE_ALL;
     err = clGetDeviceIDs(platform, device_type, 1, &device_id, &device_num);
@@ -128,6 +125,7 @@ int main(int argc, char** argv)
 
     test_square(context, device_id, commands);
     test_pipe(context, device_id, commands);
+    test_pipe_resv(context, device_id, commands);
 
     // Shutdown and cleanup
     //

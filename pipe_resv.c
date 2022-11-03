@@ -13,7 +13,7 @@
 #define DATA_SIZE (16)
 
 
-int test_pipe(cl_context context, cl_device_id device_id, cl_command_queue commands) {
+int test_pipe_resv(cl_context context, cl_device_id device_id, cl_command_queue commands) {
 
     int data[DATA_SIZE];              // original data set given to device
     int results[DATA_SIZE];           // results returned from device
