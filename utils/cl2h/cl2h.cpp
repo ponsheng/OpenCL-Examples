@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <string>
+#include <cstring>
 #include <fstream>
 #include <filesystem>
 
@@ -12,19 +13,23 @@
 using namespace std;
 
 void usage() {
-  cout << "Usage: cl2h <cl file>\n";
+  cout << "Usage: cl2h <cl file> [-o <output_dir>]\n";
 }
 
-string getHeaderBase(const string &cl_file) {
+filesystem::path getHeaderPath(const string &cl_file, const string &OutDir) {
   string header_name = cl_file;
-  string dir_path;
   size_t pos;
+  filesystem::path HeaderPath;
 
   // Get basename , TODO find \ for Windows
   pos = cl_file.rfind("/");
   if (pos != string::npos) {
     header_name = cl_file.substr(pos + 1);
-    dir_path = cl_file.substr(0, pos + 1);
+    if (OutDir.size() > 0) {
+      HeaderPath = OutDir;
+    } else {
+      HeaderPath = cl_file.substr(0, pos + 1);
+    }
   }
 
   // Replace all '.' to '_' in basename
@@ -36,11 +41,11 @@ string getHeaderBase(const string &cl_file) {
     header_name.replace(pos, 1, "_");
   } while (pos != string::npos);
 
-  header_name = dir_path + header_name + ".h";
+  HeaderPath /= header_name + ".h";
 
-  cout << "Gen: " << header_name << endl;
+  cout << "Gen: " << HeaderPath << endl;
 
-  return header_name;
+  return HeaderPath;
 }
 
 int check_input(const string &cl_file) {
@@ -52,6 +57,7 @@ int check_input(const string &cl_file) {
 
   if (!filesystem::exists(cl_file)) {
     cerr << "Input file " << cl_file << " does not exist" << endl;
+    cout << "pwd: " << filesystem::current_path() << endl;
     return EXIT_FAILURE;
   }
   return EXIT_SUCCESS;
@@ -63,15 +69,22 @@ int main(const int argc, const char **argv) {
     return EXIT_FAILURE;
   }
 
-  // TODO accept output dir
-
   string cl_file(argv[1]);
   if (int ret = check_input(cl_file)) {
     return ret;
   }
+
+  string OutDir;
+  if (argc == 4 && strncmp(argv[2], "-o", 2) == 0) {
+    OutDir = argv[3];
+    if (!filesystem::is_directory(OutDir)) {
+      cerr << "Error: expected dir: " << OutDir << endl;
+      return EXIT_FAILURE;
+    }
+  }
   
   // Generate output file name
-  string header_name = getHeaderBase(cl_file);
+  filesystem::path header_name = getHeaderPath(cl_file, OutDir);
 
   string str = "static const char *KernelSource = \n";
 

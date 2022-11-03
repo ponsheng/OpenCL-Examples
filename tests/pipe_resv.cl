@@ -3,7 +3,7 @@ __kernel void pipe_writer(__global int *in, write_only pipe int p_in) {
   write_pipe(p_in, &in[gid]);
 }
 
-#define RESV_CNT 5
+#define RESV_CNT 4
 
 __kernel void pipe_reader(__global int *out, read_only pipe int p_out) {
   int gid = get_global_id(0);
